@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+      <title>HTML5を始める</title>
+  </head>
+  <body>
+    <canvas id="canvas" width="400px" height="300px">
+      このブラウザは
+      <code>&lt;canvas&gt;</code> 要素をサポートしていません。
+    </canvas>
+    <script type="text/javascript">
+      var gl; // WebGL コンテキスト用のグローバル変数
+      
+      function initWebGL(canvas) {
+        gl = null;
+        try {
+          // 標準コンテキストの取得を試みる。失敗した場合は、experimental にフォールバックする。
+          gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        }
+        catch(e) {}
+        // GL コンテキストを取得できない場合は終了する
+        if (!gl) {
+          alert("WebGL を初期化できません。ブラウザはサポートしていないようです。");
+          gl = null;
+        }
+        return gl;
+      }
+    
+      (function(){
+       var canvas = document.getElementById('canvas');
+       if ( !canvas && !canvas.getContext ) {
+         return false;
+       } else {
+         gl = initWebGL(canvas);
+         if(gl) {
+           gl.clearColor(0.0, 0.0, 0.0, 1.0);
+           gl.enable(gl.DEPTH_TEST);
+           gl.depthFunc(gl.LEQUAL);
+           gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+         }
+       }
+     })();
+      </script>
+  </body>
+</html>

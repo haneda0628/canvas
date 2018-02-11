@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+      <title>webgl - 1</title>
+      <script src="minMatrix.js" type="text/javascript"></script>
+  </head>
+  <body>
+    <canvas id="canvas" width="400px" height="300px">
+      このブラウザは
+      <code>&lt;canvas&gt;</code> 要素をサポートしていません。
+    </canvas>
+    <script id="vs" type="x-shader/x-vertex">
+      attribute vec3 position;
+      uniform mat4 mvpMatrix;
+      void main(void) {
+        gl_Position = mvpMatrix * vec4(position, 1.0);
+      }
+    </script>
+    <script id="fs" type="x-shader/x-fragment">
+      void main(void) {
+        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+      }
+    </script>
+
+    <script type="text/javascript">
+      var gl; // WebGL コンテキスト用のグローバル変数
+
+      function initWebGL(canvas) {
+        gl = null;
+        try {
+          // 標準コンテキストの取得を試みる。失敗した場合は、experimental にフォールバックする。
+          gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+        }
+        catch(e) {}
+        // GL コンテキストを取得できない場合は終了する
+        if (!gl) {
+          alert("WebGL を初期化できません。ブラウザはサポートしていないようです。");
+          gl = null;
+        }
+        return gl;
+      }
+
+      function create_shader(id) {
+        var shader;
+        var scriptElement = document.getElementById(id);
+        if(!scriptElement) { return;}
+        switch(scriptElement.type) {
+          case 'x-shader/x-vertex': {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+            break;
+          }
+          case 'x-shader/x-fragment': {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+            break;
+          }
+          default: {
+            return ;
+          }
+        }
+        gl.shaderSource(shader, scriptElement.text);
+        gl.compileShader(shader);
+        if(gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+          return shader;
+        } else {
+          alert(gl.getShaderInfoLog(shader));
+        }
+    }
+
+    function create_program(vs, fs) {
+      var program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+
+      gl.linkProgram(program);
+      if(gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        gl.useProgram(program);
+        return program;
+      } else {
+        alert(gl.getProgramInfoLog(program));
+      }
+    }
+
+    function create_vbo(data) {
+      var vbo = gl.createBuffer();
+
+      //バッファをバインド
+      gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+
+      //バッファにデータをセット
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+
+      //バッファのバインドを無効化（WebGLにバッファは一つしかバインドされないため）
+      gl.bindBuffer(gl.ARRAY_BUFFER, null);
+      return vbo;
+    }
+
+    (function(){
+      console.log("start webgl.");
+       var canvas = document.getElementById('canvas');
+       if ( !canvas && !canvas.getContext ) {
+         return false;
+       } else {
+         console.log("Init webgl.");
+         gl = initWebGL(canvas);
+         if(gl) {
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clearDepth(1.0);
+            gl.enable(gl.DEPTH_TEST);
+            gl.depthFunc(gl.LEQUAL);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            var v_shader = create_shader('vs');
+            var f_shader = create_shader('fs');
+
+            var prg = create_program(v_shader, f_shader);
+            var attLocation = gl.getAttribLocation(prg, 'position');
+            var attStride = 3;
+
+            var vertex_position = [
+              0.0, 1.6, 0.0,
+              1.0, 0.0, 0.0,
+              -1.0, 0.0, 0.0,
+            ];
+
+            console.log("Create VBO.");
+            var vbo = create_vbo(vertex_position);
+            gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+            gl.enableVertexAttribArray(attLocation);
+            gl.vertexAttribPointer(attLocation, attStride, gl.FLOAT, false, 0, 0);
+
+            var m = new matIV();
+            var mMatrix = m.identity(m.create());
+            var vMatrix = m.identity(m.create());
+            var pMatrix = m.identity(m.create());
+            var mvpMatrix = m.identity(m.create());
+
+            m.lookAt([0.0, 0.0, 5.0], [0, 0, 0], [0, 1, 0], vMatrix);
+            //視野角：60度
+            //縦横比：canvasの縦横比
+            //描画オブジェクト：カメラから0.1ユニット - 100ユニットの範囲内
+            m.perspective(60, canvas.width/canvas.height, 0.1, 100, pMatrix);
+            m.multiply(pMatrix, vMatrix, mvpMatrix);
+            m.multiply(mvpMatrix, mMatrix, mvpMatrix);
+
+            var uniLocation = gl.getUniformLocation(prg, 'mvpMatrix');
+            gl.uniformMatrix4fv(uniLocation, false, mvpMatrix);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            gl.flush();
+         }
+       }
+     })();
+      </script>
+  </body>
+</html>
